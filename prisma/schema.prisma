@@ -6,7 +6,7 @@
 
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../app/generated/prisma"
 }
 
@@ -32,8 +32,10 @@ model User {
   id           String        @id @default(cuid())
   name         String
   email        String        @unique
-  role         Role        @default(USER) // "ADMIN" or "USER"
+  password     String        // Hashed password
+  role         Role          @default(USER)
   reservations Reservation[]
+  createdAt    DateTime      @default(now())
 }
 
 model Category {
