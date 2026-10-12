@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Define the allowed roles as an Enum
+enum Role {
+  USER
+  ADMIN
+}
+
+// Status options for reservations
+enum ReservationStatus {
+  PENDING    // Optional: Useful if bookings require admin approval
+  CONFIRMED  // Active reservation
+  CANCELLED  // Cancelled by user or admin
+  COMPLETED  // Ended automatically or marked as done
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  role         Role        @default(USER) // "ADMIN" or "USER"
+  reservations Reservation[]
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  resources   Resource[]
+}
+
+model Resource {
+  id           String        @id @default(cuid())
+  name         String
+  description  String?
+  location     String
+  capacity     Int
+  categoryId   String
+  category     Category      @relation(fields: [categoryId], references: [id])
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+}
+
+model Reservation {
+  id         String   @id @default(cuid())
+  resourceId String
+  userId     String
+  startTime  DateTime
+  endTime    DateTime
+  status     ReservationStatus   @default(CONFIRMED) // "CONFIRMED", "CANCELLED"
+  createdAt  DateTime @default(now())
+
+  resource Resource @relation(fields: [resourceId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+}
