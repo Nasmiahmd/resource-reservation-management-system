@@ -15,19 +15,26 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     })
 
     if (!resource) {
-      return NextResponse.json({ success: false, error: "Resource not found" }, { status: 404 })
+      return NextResponse.json(
+        { success: false, error: "Resource not found" },
+        { status: 404 }
+      )
     }
 
     return NextResponse.json({ success: true, data: resource })
   } catch (error) {
-    return NextResponse.json({ success: false, error: "Failed to fetch resource" }, { status: 500 })
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch resource" },
+      { status: 500 }
+    )
   }
 }
 
 // PUT /api/resources/[id] - Update resource details
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   const { user, error } = await requireAdmin(request)
-  if (error) return error // Automatically returns 401 Unauthorized or 403 Forbidden
+  if (error) return error
+
   try {
     const { id } = await params
     const body = await request.json()
@@ -40,34 +47,41 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         ...(body.location && { location: body.location }),
         ...(body.capacity && { capacity: Number(body.capacity) }),
         ...(body.categoryId && { categoryId: body.categoryId }),
+        ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }), // <-- Updated in PostgreSQL
+      },
+      include: {
+        category: true, // <-- Included so category metadata remains intact after edit
       },
     })
 
     return NextResponse.json({ success: true, data: resource })
   } catch (error) {
-    return NextResponse.json({ success: false, error: "Failed to update resource" }, { status: 500 })
+    console.error("Error updating resource:", error)
+    return NextResponse.json(
+      { success: false, error: "Failed to update resource" },
+      { status: 500 }
+    )
   }
 }
 
 // DELETE /api/resources/[id] - Delete a resource (ADMIN only)
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  // 1. Enforce Admin Access
   const { error } = await requireAdmin(request)
   if (error) return error
 
   try {
     const { id } = await params
 
-    // 2. Perform Delete
     await prisma.resource.delete({
       where: { id },
     })
 
-    return NextResponse.json({ success: true, message: "Resource deleted successfully" })
+    return NextResponse.json({
+      success: true,
+      message: "Resource deleted successfully",
+    })
   } catch (error: unknown) {
-    // 3. Handle specific Prisma error codes
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      // P2025: Record to delete does not exist
       if (error.code === "P2025") {
         return NextResponse.json(
           { success: false, error: "Resource not found" },
@@ -75,10 +89,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         )
       }
 
-      // P2003: Foreign key constraint failed (has linked reservations)
       if (error.code === "P2003") {
         return NextResponse.json(
-          { success: false, error: "Cannot delete resource with linked reservations. Cancel or remove associated bookings first." },
+          {
+            success: false,
+            error:
+              "Cannot delete resource with linked reservations. Cancel or remove associated bookings first.",
+          },
           { status: 400 }
         )
       }

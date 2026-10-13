@@ -33,7 +33,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PUT /api/categories/[id] - Update category details (ADMIN & OWN only)
+// PUT /api/categories/[id] - Update category details (ADMIN only)
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   const { error } = await requireAdmin(request)
   if (error) return error
@@ -41,13 +41,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
     const body = await request.json()
-    const { name, description } = body
+    const { name, description, imageUrl } = body // <-- Extracted imageUrl
 
     const category = await prisma.category.update({
       where: { id },
       data: {
         ...(name && { name }),
         ...(description !== undefined && { description }),
+        ...(imageUrl !== undefined && { imageUrl }), // <-- Update Cloudinary URL in PostgreSQL
+      },
+      include: {
+        _count: { select: { resources: true } }, // <-- Preserve linked resource count in response
       },
     })
 
@@ -60,6 +64,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       )
     }
 
+    console.error("Error updating category:", error)
     return NextResponse.json(
       { success: false, error: "Failed to update category" },
       { status: 500 }
@@ -96,7 +101,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json(
           {
             success: false,
-            error: "Cannot delete category with assigned resources. Reassign or delete linked resources first.",
+            error:
+              "Cannot delete category with assigned resources. Reassign or delete linked resources first.",
           },
           { status: 400 }
         )

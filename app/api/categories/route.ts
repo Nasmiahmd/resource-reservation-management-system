@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { name, description } = body
+    const { name, description, imageUrl } = body // <-- Extracted imageUrl
 
     // 2. Input Validation
     if (!name || typeof name !== "string" || name.trim() === "") {
@@ -43,6 +43,10 @@ export async function POST(request: NextRequest) {
       data: {
         name: name.trim(),
         description: description ? String(description).trim() : null,
+        imageUrl: imageUrl || null, // <-- Save Cloudinary URL to PostgreSQL
+      },
+      include: {
+        _count: { select: { resources: true } }, // <-- Return resource count for frontend UI
       },
     })
 

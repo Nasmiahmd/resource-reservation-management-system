@@ -4,6 +4,7 @@ export interface Category {
   id: string
   name: string
   description?: string | null
+  imageUrl?: string | null
   createdAt?: string
   updatedAt?: string
   resources?: any[]
@@ -15,11 +16,13 @@ export interface Category {
 export interface CreateCategoryInput {
   name: string
   description?: string
+  imageUrl?: string
 }
 
 export interface UpdateCategoryInput {
   name?: string
   description?: string
+  imageUrl?: string
 }
 
 export const categoryService = {

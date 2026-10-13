@@ -47,15 +47,18 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   // 1. Verify JWT and require ADMIN role
   const { user, error } = await requireAdmin(request)
-  if (error) return error // Automatically returns 401 Unauthorized or 403 Forbidden
+  if (error) return error
 
   try {
     const body = await request.json()
-    const { name, description, location, capacity, categoryId } = body
+    const { name, description, location, capacity, categoryId, imageUrl } = body
 
     if (!name || !location || !capacity || !categoryId) {
       return NextResponse.json(
-        { success: false, error: "Missing required fields: name, location, capacity, categoryId" },
+        {
+          success: false,
+          error: "Missing required fields: name, location, capacity, categoryId",
+        },
         { status: 400 }
       )
     }
@@ -67,11 +70,16 @@ export async function POST(request: NextRequest) {
         location,
         capacity: Number(capacity),
         categoryId,
+        imageUrl: imageUrl || null, // <-- Saved to PostgreSQL
+      },
+      include: {
+        category: true, // <-- Return category object so frontend updates immediately
       },
     })
 
     return NextResponse.json({ success: true, data: resource }, { status: 201 })
   } catch (error) {
+    console.error("Error creating resource:", error)
     return NextResponse.json(
       { success: false, error: "Failed to create resource" },
       { status: 500 }
