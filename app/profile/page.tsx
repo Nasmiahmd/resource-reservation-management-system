@@ -22,6 +22,8 @@ import {
   ArrowRight,
   Lock,
   X,
+  Camera,
+  Upload,
 } from "lucide-react"
 
 interface UserProfile {
@@ -29,6 +31,7 @@ interface UserProfile {
   name: string
   email: string
   role: "USER" | "ADMIN"
+  imageUrl?: string | null
 }
 
 export default function ProfilePage() {
@@ -50,6 +53,9 @@ export default function ProfilePage() {
   // Profile Form Inputs
   const [nameInput, setNameInput] = useState("")
   const [emailInput, setEmailInput] = useState("")
+  const [imageUrl, setImageUrl] = useState("")
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState("")
 
   // Password Form Inputs
   const [currentPassword, setCurrentPassword] = useState("")
@@ -76,6 +82,8 @@ export default function ProfilePage() {
       setUser(parsedUser)
       setNameInput(parsedUser.name)
       setEmailInput(parsedUser.email)
+      setImageUrl(parsedUser.imageUrl || "")
+      setImagePreview(parsedUser.imageUrl || "")
 
       // Fetch user's booking stats
       reservationService.getMine().then((res) => {
@@ -94,13 +102,50 @@ export default function ProfilePage() {
     }
   }, [router])
 
+  // Direct Cloudinary Upload Helper
+  const uploadToCloudinary = async (file: File): Promise<string> => {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "unsigned_preset"
+
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("upload_preset", uploadPreset)
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: "POST",
+      body: formData,
+    })
+
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error?.message || "Cloudinary image upload failed")
+    return data.secure_url
+  }
+
   // Open Profile Edit Modal
   const handleOpenProfileModal = () => {
     if (!user) return
     setNameInput(user.name)
     setEmailInput(user.email)
+    setImageUrl(user.imageUrl || "")
+    setImagePreview(user.imageUrl || "")
+    setImageFile(null)
     setModalError("")
     setIsEditingProfile(true)
+  }
+
+  // Handle Avatar Selection
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setImageFile(file)
+      setImagePreview(URL.createObjectURL(file))
+    }
+  }
+
+  const handleRemoveImage = () => {
+    setImageFile(null)
+    setImageUrl("")
+    setImagePreview("")
   }
 
   // Open Password Edit Modal
@@ -112,7 +157,7 @@ export default function ProfilePage() {
     setIsEditingPassword(true)
   }
 
-  // Update Name & Email
+  // Update Name, Email & Cloudinary Avatar
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
     setModalError("")
@@ -124,24 +169,41 @@ export default function ProfilePage() {
 
     setSubmitting(true)
 
-    const res = await api.put<{ token?: string; user?: UserProfile }>("/api/profile", {
-      name: nameInput.trim(),
-      email: emailInput.trim(),
-    })
+    try {
+      let finalImageUrl = imageUrl
 
-    setSubmitting(false)
-
-    if (res.success && res.data) {
-      const updatedUser = res.data.user || { ...user!, name: nameInput, email: emailInput }
-      if (res.data.token) {
-        localStorage.setItem("token", res.data.token)
+      if (imageFile) {
+        finalImageUrl = await uploadToCloudinary(imageFile)
       }
-      localStorage.setItem("user", JSON.stringify(updatedUser))
-      setUser(updatedUser)
-      setIsEditingProfile(false)
-      setMessage({ type: "success", text: "Profile details updated successfully!" })
-    } else {
-      setModalError(res.error || "Failed to update profile details.")
+
+      const res = await api.put<{ token?: string; user?: UserProfile }>("/api/profile", {
+        name: nameInput.trim(),
+        email: emailInput.trim(),
+        imageUrl: finalImageUrl,
+      })
+
+      if (res.success && res.data) {
+        const updatedUser = res.data.user || {
+          ...user!,
+          name: nameInput,
+          email: emailInput,
+          imageUrl: finalImageUrl,
+        }
+
+        if (res.data.token) {
+          localStorage.setItem("token", res.data.token)
+        }
+        localStorage.setItem("user", JSON.stringify(updatedUser))
+        setUser(updatedUser)
+        setIsEditingProfile(false)
+        setMessage({ type: "success", text: "Profile details and avatar updated successfully!" })
+      } else {
+        setModalError(res.error || "Failed to update profile details.")
+      }
+    } catch (err: any) {
+      setModalError(err.message || "An error occurred while uploading avatar.")
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -211,15 +273,19 @@ export default function ProfilePage() {
         <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
             <div className="flex items-center gap-5">
-              {/* Avatar Initial */}
-              <div
-                className={`flex h-20 w-20 items-center justify-center rounded-2xl font-black text-3xl shadow-inner ${
-                  isAdmin
-                    ? "bg-linear-to-br from-blue-600 to-indigo-700 text-white"
-                    : "bg-slate-800 text-white"
-                }`}
-              >
-                {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+              {/* Cloudinary Avatar Display / Initial Fallback */}
+              <div className="relative h-20 w-20 overflow-hidden rounded-2xl shadow-inner border border-gray-200 shrink-0 bg-slate-800 flex items-center justify-center">
+                {user.imageUrl ? (
+                  <img src={user.imageUrl} alt={user.name} className="h-full w-full object-cover" />
+                ) : (
+                  <span
+                    className={`font-black text-3xl text-white ${
+                      isAdmin ? "text-blue-200" : "text-gray-200"
+                    }`}
+                  >
+                    {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+                  </span>
+                )}
               </div>
 
               <div>
@@ -422,7 +488,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Edit Profile Info Modal */}
+        {/* Edit Profile Info & Avatar Modal */}
         {isEditingProfile && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
@@ -443,6 +509,46 @@ export default function ProfilePage() {
               )}
 
               <form onSubmit={handleUpdateProfile} className="mt-4 space-y-4">
+                {/* Cloudinary Profile Picture Upload */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-gray-700 tracking-wider">
+                    Profile Picture
+                  </label>
+                  <div className="mt-1.5 flex items-center gap-4 rounded-xl border border-gray-200 p-3 bg-gray-50">
+                    <div className="relative h-16 w-16 overflow-hidden rounded-full border border-gray-300 bg-slate-800 flex items-center justify-center shrink-0">
+                      {imagePreview ? (
+                        <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-white font-bold text-lg">
+                          {nameInput ? nameInput.charAt(0).toUpperCase() : "U"}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm cursor-pointer hover:bg-gray-100 transition">
+                        <Upload size={14} /> Upload Avatar
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {imagePreview && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveImage}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:underline"
+                        >
+                          <X size={12} /> Remove Picture
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold uppercase text-gray-700 tracking-wider">
                     Full Name

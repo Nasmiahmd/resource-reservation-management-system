@@ -1,72 +1,73 @@
 // src/lib/auth.ts
-import jwt from "jsonwebtoken"
 import { NextRequest, NextResponse } from "next/server"
+import jwt, { JwtPayload } from "jsonwebtoken"
 
-// Keep the role type local; Prisma does not export Role in this setup.
-type Role = "USER" | "ADMIN"
-
-const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key"
-
-export interface JWTPayload {
-  userId: string
+// Custom JwtPayload interface
+export interface UserJwtPayload extends JwtPayload {
+  id: string
   email: string
-  role: Role
+  role: "USER" | "ADMIN"
+  name?: string
+  imageUrl?: string | null
 }
 
-// Generate JWT token
-export function signJWT(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "1d" })
+// 1. Export signJWT helper function for login/registration routes
+export function signJWT(
+  payload: Record<string, any>,
+  expiresIn: string | number = "7d"
+): string {
+  const secret = process.env.JWT_SECRET || "fallback_jwt_secret"
+  return jwt.sign(payload, secret, { expiresIn: expiresIn as any })
 }
 
-// Verify JWT token
-export function verifyJWT(token: string): JWTPayload | null {
+// 2. Authenticate request middleware helper
+export async function authenticate(request: NextRequest): Promise<{
+  user: UserJwtPayload | null
+  error: NextResponse | null
+}> {
   try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload
-  } catch (error) {
-    return null
-  }
-}
+    const authHeader = request.headers.get("authorization")
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return {
+        user: null,
+        error: NextResponse.json(
+          { success: false, error: "Authentication token required" },
+          { status: 401 }
+        ),
+      }
+    }
 
-// Middleware Helper: Authenticate any active user (USER or ADMIN)
-export async function authenticate(request: NextRequest) {
-  const authHeader = request.headers.get("authorization")
+    const token = authHeader.split(" ")[1]
+    const secret = process.env.JWT_SECRET || "fallback_jwt_secret"
+    const decoded = jwt.verify(token, secret) as UserJwtPayload
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return { user: decoded, error: null }
+  } catch (err) {
     return {
       user: null,
       error: NextResponse.json(
-        { success: false, error: "Unauthorized: Missing or invalid token format" },
+        { success: false, error: "Invalid or expired token" },
         { status: 401 }
       ),
     }
   }
-
-  const token = authHeader.split(" ")[1]
-  const decoded = verifyJWT(token)
-
-  if (!decoded) {
-    return {
-      user: null,
-      error: NextResponse.json(
-        { success: false, error: "Unauthorized: Token is invalid or expired" },
-        { status: 401 }
-      ),
-    }
-  }
-
-  return { user: decoded, error: null }
 }
 
-// Middleware Helper: Strictly require ADMIN role
-export async function requireAdmin(request: NextRequest) {
+// 3. Require Admin role middleware helper
+export async function requireAdmin(request: NextRequest): Promise<{
+  user: UserJwtPayload | null
+  error: NextResponse | null
+}> {
   const { user, error } = await authenticate(request)
-  if (error) return { user: null, error }
+  if (error || !user) {
+    return { user: null, error }
+  }
 
-  if (user?.role !== "ADMIN") {
+  if (user.role !== "ADMIN") {
     return {
       user: null,
       error: NextResponse.json(
-        { success: false, error: "Forbidden: Admin privileges required" },
+        { success: false, error: "Forbidden: Admin access required" },
         { status: 403 }
       ),
     }

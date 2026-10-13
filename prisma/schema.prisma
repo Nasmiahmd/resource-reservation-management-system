@@ -1,10 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
-
-
 generator client {
   provider = "prisma-client-js"
   output   = "../app/generated/prisma"
@@ -35,16 +31,20 @@ model User {
   password     String?
   googleId     String?       @unique
   role         Role          @default(USER)
+  imageUrl     String?       
   reservations Reservation[]
   createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt @default(now()) // Added @default(now())
+  updatedAt    DateTime      @updatedAt @default(now())
 }
 
 model Category {
   id          String     @id @default(cuid())
-  name        String
+  name        String     @unique
   description String?
+  imageUrl    String?    
   resources   Resource[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt @default(now())
 }
 
 model Resource {
@@ -53,11 +53,12 @@ model Resource {
   description  String?
   location     String
   capacity     Int
+  imageUrl     String?       
   categoryId   String
   category     Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   reservations Reservation[]
   createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt @default(now()) // Added @default(now())
+  updatedAt    DateTime      @updatedAt @default(now())
 }
 
 model Reservation {
@@ -68,7 +69,7 @@ model Reservation {
   endTime    DateTime
   status     ReservationStatus @default(CONFIRMED)
   createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt @default(now()) // Added @default(now())
+  updatedAt  DateTime          @updatedAt @default(now())
 
   resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)

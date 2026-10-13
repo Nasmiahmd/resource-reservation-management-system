@@ -19,6 +19,7 @@ import {
 interface User {
   name: string
   role: string
+  imageUrl?: string | null
 }
 
 export default function Navbar() {
@@ -107,9 +108,17 @@ export default function Navbar() {
             className="flex items-center gap-2.5 rounded-lg p-1.5 hover:bg-gray-50 transition cursor-pointer text-right group"
             title="View Profile"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600 font-bold text-xs group-hover:bg-blue-600 group-hover:text-white transition">
-              {user.name ? user.name.charAt(0).toUpperCase() : <UserIcon size={14} />}
+            {/* Desktop Cloudinary Avatar / Initial Fallback */}
+            <div className="h-8 w-8 overflow-hidden rounded-full bg-blue-50 text-blue-600 font-bold text-xs flex items-center justify-center shrink-0 border border-gray-200 group-hover:border-blue-500 transition">
+              {user.imageUrl ? (
+                <img src={user.imageUrl} alt={user.name} className="h-full w-full object-cover" />
+              ) : user.name ? (
+                user.name.charAt(0).toUpperCase()
+              ) : (
+                <UserIcon size={14} />
+              )}
             </div>
+
             <div className="text-right">
               <p className="text-sm font-semibold text-gray-800 group-hover:text-blue-600 transition">
                 {user.name}
@@ -151,9 +160,17 @@ export default function Navbar() {
             className="flex items-center justify-between rounded-xl bg-gray-50 p-3 hover:bg-blue-50/60 transition"
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-sm shadow-sm">
-                {user.name ? user.name.charAt(0).toUpperCase() : <UserIcon size={16} />}
+              {/* Mobile Cloudinary Avatar / Initial Fallback */}
+              <div className="h-10 w-10 overflow-hidden rounded-full bg-blue-600 text-white font-bold text-sm shadow-sm flex items-center justify-center shrink-0">
+                {user.imageUrl ? (
+                  <img src={user.imageUrl} alt={user.name} className="h-full w-full object-cover" />
+                ) : user.name ? (
+                  user.name.charAt(0).toUpperCase()
+                ) : (
+                  <UserIcon size={16} />
+                )}
               </div>
+
               <div>
                 <p className="text-sm font-bold text-gray-900">{user.name}</p>
                 <span className="inline-flex items-center text-xs text-gray-500">
