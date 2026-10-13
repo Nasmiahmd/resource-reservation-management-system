@@ -1,10 +1,9 @@
-// src/app/api/auth/login/route.ts
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { signJWT } from "@/lib/auth"
 
-// Login
+// POST /api/auth/login - Authenticate with email & password
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json()
@@ -20,14 +19,16 @@ export async function POST(request: NextRequest) {
       where: { email },
       select: { id: true, email: true, name: true, role: true, password: true },
     })
-    if (!user) {
+
+    // 1. Guard against non-existent users OR Google OAuth accounts with null passwords
+    if (!user || !user.password) {
       return NextResponse.json(
         { success: false, error: "Invalid email or password" },
         { status: 401 }
       )
     }
 
-    // Compare hashed password
+    // 2. Safely compare hashed password
     const isPasswordValid = await bcrypt.compare(password, user.password)
     if (!isPasswordValid) {
       return NextResponse.json(
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate JWT token
+    // 3. Issue JWT Token
     const token = signJWT({
       userId: user.id,
       email: user.email,
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
+    console.error("Login Error:", error)
     return NextResponse.json(
       { success: false, error: "Authentication failed" },
       { status: 500 }

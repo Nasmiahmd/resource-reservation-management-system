@@ -68,9 +68,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (email) updateData.email = email
     if (password) updateData.password = await bcrypt.hash(password, 10)
 
+
     // Only Admins can change roles
-    if (role && currentUser.role === ADMIN_ROLE) {
-      updateData.role = role
+    const trimmedUser = role.toUpperCase()
+    
+    if (trimmedUser && currentUser.role === ADMIN_ROLE) {
+      updateData.role = trimmedUser
     }
 
     const updatedUser = await prisma.user.update({
