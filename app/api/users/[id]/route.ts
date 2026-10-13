@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { authenticate, requireAdmin } from "@/lib/auth"
 import bcrypt from "bcryptjs"
+import { Prisma } from "@/app/generated/prisma/client"
 
 const ADMIN_ROLE = "ADMIN"
 
@@ -31,7 +32,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         name: true,
         email: true,
         role: true,
-        reservations: true,
+        reservations: {
+          include: {
+            resource: { select: { id: true, name: true, location: true } },
+          },
+        },
       },
     })
 
@@ -63,17 +68,30 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json()
     const { name, email, password, role } = body
 
-    const updateData: any = {}
-    if (name) updateData.name = name
-    if (email) updateData.email = email
-    if (password) updateData.password = await bcrypt.hash(password, 10)
+    const updateData: Record<string, any> = {}
+    if (name && name.trim() !== "") updateData.name = name.trim()
+    if (email && email.trim() !== "") updateData.email = email.trim()
 
+    if (password) {
+      if (password.length < 6) {
+        return NextResponse.json(
+          { success: false, error: "Password must be at least 6 characters long" },
+          { status: 400 }
+        )
+      }
+      updateData.password = await bcrypt.hash(password, 10)
+    }
 
-    // Only Admins can change roles
-    const trimmedUser = role.toUpperCase()
-    
-    if (trimmedUser && currentUser.role === ADMIN_ROLE) {
-      updateData.role = trimmedUser
+    // Safely parse role only if provided and requested by an Admin
+    if (role && currentUser?.role === ADMIN_ROLE) {
+      updateData.role = role.toUpperCase()
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { success: false, error: "No valid fields provided for update" },
+        { status: 400 }
+      )
     }
 
     const updatedUser = await prisma.user.update({
@@ -88,8 +106,26 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     })
 
     return NextResponse.json({ success: true, data: updatedUser })
-  } catch (err) {
-    return NextResponse.json({ success: false, error: "Failed to update user" }, { status: 500 })
+  } catch (err: unknown) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (err.code === "P2002") {
+        return NextResponse.json(
+          { success: false, error: "An account with this email address already exists" },
+          { status: 409 }
+        )
+      }
+      if (err.code === "P2025") {
+        return NextResponse.json(
+          { success: false, error: "User not found" },
+          { status: 404 }
+        )
+      }
+    }
+
+    return NextResponse.json(
+      { success: false, error: "Failed to update user" },
+      { status: 500 }
+    )
   }
 }
 
@@ -103,9 +139,16 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     await prisma.user.delete({ where: { id } })
     return NextResponse.json({ success: true, message: "User deleted successfully" })
-  } catch (err) {
+  } catch (err: unknown) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 }
+      )
+    }
+
     return NextResponse.json(
-      { success: false, error: "Failed to delete user or user has existing dependencies" },
+      { success: false, error: "Failed to delete user or user has active reservations" },
       { status: 500 }
     )
   }
