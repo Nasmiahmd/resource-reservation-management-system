@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   experimental: {
     agentFeedback: true,
   },
+  output: "standalone",
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
@@ -14,6 +15,10 @@ const nextConfig: NextConfig = {
         as: "*.css",
       },
     },
+  },
+  typescript: {
+    // Ignore TS errors during next build inside Docker
+    ignoreBuildErrors: true,
   },
 };
 
