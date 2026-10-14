@@ -317,13 +317,13 @@ export default function ProfilePage() {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={handleOpenProfileModal}
-                className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition shrink-0"
+                className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700! hover:bg-blue-100 transition shrink-0"
               >
                 <Edit3 size={16} /> Edit Info
               </button>
               <button
                 onClick={handleOpenPasswordModal}
-                className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition shrink-0"
+                className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700! hover:bg-red-100 transition shrink-0"
               >
                 <Lock size={16} /> Security
               </button>
@@ -468,7 +468,7 @@ export default function ProfilePage() {
                 </div>
                 <button
                   onClick={handleOpenPasswordModal}
-                  className="text-xs font-semibold text-blue-600 hover:underline"
+                  className="text-xs font-semibold text-blue-600! hover:underline"
                 >
                   Change Password
                 </button>

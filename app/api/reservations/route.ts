@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   if (!currentUser) {
     return NextResponse.json(
       { success: false, error: "Unauthorized" },
-      { status: 401 },
+      { status: 401 }
     );
   }
 
@@ -19,11 +19,15 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const requestedUserId = searchParams.get("userId") || undefined;
     const resourceId = searchParams.get("resourceId") || undefined;
+    const isMineOnly = searchParams.get("mine") === "true";
 
     let targetUserId: string | undefined = requestedUserId;
 
-    // 2. Role-Based Access Rules
-    if (currentUser.role !== Role.ADMIN) {
+    // 2. Role-Based Access Rules & Scope Resolution
+    if (isMineOnly) {
+      // Force filter to current user's reservations (for "My Bookings" page)
+      targetUserId = currentUser.userId;
+    } else if (currentUser.role !== Role.ADMIN) {
       if (requestedUserId && requestedUserId !== currentUser.userId) {
         // Regular users cannot view another user's reservation history
         return NextResponse.json(
@@ -31,11 +35,11 @@ export async function GET(request: NextRequest) {
             success: false,
             error: "Forbidden: You can only view your own reservations",
           },
-          { status: 403 },
+          { status: 403 }
         );
       }
 
-      // If no resourceId filter is provided, default regular users to fetching only their own bookings
+      // Default regular users to fetching only their own bookings if no resource filter is provided
       if (!requestedUserId && !resourceId) {
         targetUserId = currentUser.userId;
       }
@@ -59,12 +63,12 @@ export async function GET(request: NextRequest) {
     console.error("Error fetching reservations:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch reservations" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
 
-// POST /api/reservations - Create a booking with conflict checking
+// POST /api/reservations - Create a booking with capacity & conflict checking
 export async function POST(request: NextRequest) {
   // 1. Authenticate incoming request (User or Admin)
   const { user: currentUser, error: authError } = await authenticate(request);
@@ -72,7 +76,7 @@ export async function POST(request: NextRequest) {
   if (!currentUser) {
     return NextResponse.json(
       { success: false, error: "Unauthorized" },
-      { status: 401 },
+      { status: 401 }
     );
   }
 
@@ -80,19 +84,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { resourceId, userId, startTime, endTime } = body;
 
-    // Omit userId here so standard users don't have to pass it explicitly in body
     if (!resourceId || !startTime || !endTime) {
       return NextResponse.json(
         {
           success: false,
           error: "Missing required fields: resourceId, startTime, endTime",
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     // 2. Validate Ownership vs Admin Privileges
-    // Regular users can only book for themselves. Admins can specify any userId.
     let targetUserId = currentUser.userId;
 
     if (currentUser.role === Role.ADMIN && userId) {
@@ -107,32 +109,50 @@ export async function POST(request: NextRequest) {
           success: false,
           error: "Forbidden: You cannot create reservations for another user",
         },
-        { status: 403 },
+        { status: 403 }
       );
     }
 
     const start = new Date(startTime);
     const end = new Date(endTime);
 
+    // 3. Time Validations
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       return NextResponse.json(
         { success: false, error: "Invalid date format provided" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     if (start >= end) {
       return NextResponse.json(
         { success: false, error: "End time must be after start time" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    // Database transaction to eliminate double-booking race conditions
-    // Update the transaction block in POST /api/reservations
+    if (start < new Date()) {
+      return NextResponse.json(
+        { success: false, error: "Start time cannot be in the past" },
+        { status: 400 }
+      );
+    }
+
+    // 4. Database transaction with capacity-aware overlap checking
     const reservation = await prisma.$transaction(
       async (tx) => {
-        const conflict = await tx.reservation.findFirst({
+        // A. Fetch resource capacity
+        const resource = await tx.resource.findUnique({
+          where: { id: resourceId },
+          select: { capacity: true },
+        });
+
+        if (!resource) {
+          throw new Error("RESOURCE_NOT_FOUND");
+        }
+
+        // B. Count existing active reservations overlapping with requested slot
+        const activeConflicts = await tx.reservation.count({
           where: {
             resourceId,
             status: ReservationStatus.CONFIRMED,
@@ -140,12 +160,12 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        if (conflict) {
-          throw new Error(
-            "Resource is unavailable for the selected time range",
-          );
+        // C. Check if requested slot exceeds total available capacity
+        if (activeConflicts >= resource.capacity) {
+          throw new Error("RESOURCE_FULLY_BOOKED");
         }
 
+        // D. Create reservation
         return await tx.reservation.create({
           data: {
             resourceId,
@@ -157,28 +177,41 @@ export async function POST(request: NextRequest) {
         });
       },
       {
-        maxWait: 10000, // 10 seconds to wait for a database connection (handles Neon cold start)
-        timeout: 15000, // 15 seconds max execution time for the transaction
-      },
+        maxWait: 10000, // Handle Neon cold starts
+        timeout: 15000,
+      }
     );
 
     return NextResponse.json(
       { success: true, data: reservation },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "";
+
+    if (message === "RESOURCE_NOT_FOUND") {
+      return NextResponse.json(
+        { success: false, error: "Resource not found" },
+        { status: 404 }
+      );
+    }
+
+    if (message === "RESOURCE_FULLY_BOOKED") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "This resource is fully booked for the selected time range",
+        },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to process reservation",
+        error: message || "Failed to process reservation",
       },
-      { status: 400 },
+      { status: 500 }
     );
   }
 }
-
-
-
