@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Guard: Users can only view their own reservations; Admins can view any
-    if (currentUser.role !== Role.ADMIN && reservation.userId !== currentUser.userId) {
+    if (!currentUser || (currentUser.role !== Role.ADMIN && reservation.userId !== currentUser.userId)) {
       return NextResponse.json(
         { success: false, error: "Forbidden: You cannot view this reservation" },
         { status: 403 }
@@ -65,7 +65,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // 2. Ownership Guard
-    if (currentUser.role !== Role.ADMIN && existing.userId !== currentUser.userId) {
+    if (!currentUser || (currentUser.role !== Role.ADMIN && existing.userId !== currentUser.userId)) {
       return NextResponse.json(
         { success: false, error: "Forbidden: You can only update your own reservation" },
         { status: 403 }
@@ -159,7 +159,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    if (currentUser.role !== Role.ADMIN && existing.userId !== currentUser.userId) {
+    if (!currentUser || (currentUser.role !== Role.ADMIN && existing.userId !== currentUser.userId)) {
       return NextResponse.json(
         { success: false, error: "Forbidden: You can only update your own reservation" },
         { status: 403 }
@@ -206,7 +206,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    if (currentUser.role !== Role.ADMIN && existing.userId !== currentUser.userId) {
+    if (!currentUser || (currentUser.role !== Role.ADMIN && existing.userId !== currentUser.userId)) {
       return NextResponse.json(
         { success: false, error: "Forbidden: You can only delete your own reservation" },
         { status: 403 }

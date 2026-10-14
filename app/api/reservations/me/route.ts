@@ -7,6 +7,12 @@ export async function GET(request: NextRequest) {
   // 1. Authenticate request and extract logged-in user details from JWT
   const { user: currentUser, error: authError } = await authenticate(request)
   if (authError) return authError
+  if (!currentUser) {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 }
+    )
+  }
 
   try {
     // 2. Query reservations scoped strictly to currentUser.userId

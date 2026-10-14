@@ -8,6 +8,12 @@ export async function GET(request: NextRequest) {
   // 1. Authenticate request (USER or ADMIN)
   const { user: currentUser, error: authError } = await authenticate(request);
   if (authError) return authError;
+  if (!currentUser) {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
+    );
+  }
 
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -63,6 +69,12 @@ export async function POST(request: NextRequest) {
   // 1. Authenticate incoming request (User or Admin)
   const { user: currentUser, error: authError } = await authenticate(request);
   if (authError) return authError;
+  if (!currentUser) {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
+    );
+  }
 
   try {
     const body = await request.json();
