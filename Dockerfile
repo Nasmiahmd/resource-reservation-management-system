@@ -1,6 +1,9 @@
 # 1. Base image with Debian/OpenSSL 3.0.x dependencies
 FROM node:22-slim AS base
-RUN apt-get update -y && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+# Replace line 3 in your Dockerfile:
+RUN apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update -y && \
+    apt-get install -y openssl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
 # 2. Install dependencies
 FROM base AS deps
