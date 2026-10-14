@@ -94,15 +94,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Validate Ownership vs Admin Privileges
-    let targetUserId = currentUser.userId;
+    // 2. Resolve User ID safely (handles tokens formatted with .userId or .id)
+    const authenticatedUserId = currentUser.userId || currentUser.id;
+
+    if (!authenticatedUserId) {
+      return NextResponse.json(
+        { success: false, error: "User ID could not be identified from authentication token" },
+        { status: 401 }
+      );
+    }
+
+    // Validate Ownership vs Admin Privileges
+    let targetUserId = authenticatedUserId;
 
     if (currentUser.role === Role.ADMIN && userId) {
       targetUserId = userId;
     } else if (
       currentUser.role !== Role.ADMIN &&
       userId &&
-      userId !== currentUser.userId
+      userId !== authenticatedUserId
     ) {
       return NextResponse.json(
         {
@@ -138,7 +148,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Database transaction with capacity-aware overlap checking
+    // 4. Database transaction with capacity-aware overlap checking & explicit relation connection
     const reservation = await prisma.$transaction(
       async (tx) => {
         // A. Fetch resource capacity
@@ -165,14 +175,18 @@ export async function POST(request: NextRequest) {
           throw new Error("RESOURCE_FULLY_BOOKED");
         }
 
-        // D. Create reservation
+        // D. Create reservation using explicit relation 'connect' syntax
         return await tx.reservation.create({
           data: {
-            resourceId,
-            userId: targetUserId,
             startTime: start,
             endTime: end,
             status: ReservationStatus.CONFIRMED,
+            user: { connect: { id: targetUserId } },
+            resource: { connect: { id: resourceId } },
+          },
+          include: {
+            resource: { select: { id: true, name: true, location: true } },
+            user: { select: { id: true, name: true, email: true } },
           },
         });
       },
