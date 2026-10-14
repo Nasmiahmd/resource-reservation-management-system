@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   XCircle,
   X,
+  ArrowRight,
 } from "lucide-react"
 
 // Helper to convert ISO date string to YYYY-MM-DDTHH:mm for datetime-local inputs
@@ -168,18 +169,20 @@ export default function MyReservations() {
                       <MapPin size={12} /> {item.resource?.location || "N/A"}
                     </p>
 
-                    <div className="mt-3 flex flex-wrap gap-4 text-xs font-medium text-gray-700">
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium text-gray-700">
                       <span className="flex items-center gap-1">
                         <Calendar size={14} className="text-gray-400" />
                         {new Date(item.startTime).toLocaleDateString()}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock size={14} className="text-gray-400" />
+                        {" "}
                         {new Date(item.startTime).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
-                        })}{" "}
-                        -{" "}
+                        })}
+                      </span>
+                      <span className="flex items-center"><ArrowRight size={12}/></span>
+                      <span className="flex items-center gap-1">
+                        {new Date(item.endTime).toLocaleDateString()}
+                        {" "}
                         {new Date(item.endTime).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -209,7 +212,7 @@ export default function MyReservations() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleOpenEditModal(item)}
-                        className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition"
+                        className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700! hover:bg-gray-100 transition"
                       >
                         <Edit2 size={14} /> Edit
                       </button>
@@ -217,7 +220,7 @@ export default function MyReservations() {
                       <button
                         onClick={() => handleCancel(item.id)}
                         disabled={cancellingId === item.id}
-                        className="flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 transition"
+                        className="flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600! hover:bg-red-50 disabled:opacity-50 transition"
                       >
                         {cancellingId === item.id ? (
                           <Loader2 className="animate-spin" size={14} />
@@ -255,7 +258,7 @@ export default function MyReservations() {
                 </div>
                 <button
                   onClick={() => setEditingReservation(null)}
-                  className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  className="rounded-lg p-1 text-gray-600! hover:bg-gray-100 hover:text-gray-900!"
                 >
                   <X size={20} />
                 </button>

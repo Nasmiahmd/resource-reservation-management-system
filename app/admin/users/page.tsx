@@ -311,7 +311,7 @@ export default function AdminUsersPage() {
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => handleOpenEditModal(u)}
-                              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition"
+                              className="rounded-lg p-2 text-gray-600! hover:bg-gray-100 hover:text-blue-600! transition"
                               title="Edit User Details"
                             >
                               <Edit2 size={16} />
@@ -320,11 +320,11 @@ export default function AdminUsersPage() {
                             <button
                               onClick={() => handleDeleteUser(u)}
                               disabled={deletingId === u.id || isSelf}
-                              className="rounded-lg p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-30 transition"
+                              className="rounded-lg p-2 text-gray-600! hover:bg-red-50 hover:text-red-600! disabled:opacity-30 transition"
                               title={isSelf ? "Cannot delete self" : "Delete User"}
                             >
                               {deletingId === u.id ? (
-                                <Loader2 className="animate-spin text-red-600" size={16} />
+                                <Loader2 className="animate-spin text-red-600!" size={16} />
                               ) : (
                                 <Trash2 size={16} />
                               )}
@@ -359,7 +359,7 @@ export default function AdminUsersPage() {
                 </div>
                 <button
                   onClick={() => setEditingUser(null)}
-                  className="rounded-lg p-1 text-gray-400 hover:bg-gray-100"
+                  className="rounded-lg p-1 text-gray-600! hover:bg-gray-100 hover:text-gray-900!"
                 >
                   <X size={20} />
                 </button>

@@ -220,7 +220,7 @@ export default function CategoryManager() {
                 </h2>
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="rounded-lg p-1 text-gray-400 hover:bg-gray-100"
+                  className="rounded-lg p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 >
                   <X size={20} />
                 </button>

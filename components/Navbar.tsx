@@ -105,7 +105,7 @@ export default function Navbar() {
         <div className="hidden lg:flex items-center gap-4">
           <Link
             href="/profile"
-            className="flex items-center gap-2.5 rounded-lg p-1.5 hover:bg-gray-50 transition cursor-pointer text-right group"
+            className="flex items-center gap-2.5 rounded-lg p-1.5 hover:bg-gray-50 hover:border-blue-200 transition cursor-pointer text-right group"
             title="View Profile"
           >
             {/* Desktop Cloudinary Avatar / Initial Fallback */}
@@ -132,7 +132,7 @@ export default function Navbar() {
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 transition"
+            className="flex items-center gap-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-600! hover:text-gray-900! hover:bg-gray-100 transition"
           >
             <LogOut size={16} /> Logout
           </button>

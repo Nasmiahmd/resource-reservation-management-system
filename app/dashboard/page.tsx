@@ -216,7 +216,7 @@ export default function UserDashboard() {
                 </div>
                 <button
                   onClick={() => setSelectedResource(null)}
-                  className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  className="rounded-lg p-1 text-gray-600! hover:bg-gray-100 hover:text-gray-900!"
                 >
                   <X size={20} />
                 </button>

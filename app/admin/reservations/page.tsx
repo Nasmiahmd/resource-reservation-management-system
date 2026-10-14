@@ -20,6 +20,7 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
+  ArrowRight,
 } from "lucide-react"
 
 // Helper to convert ISO date string to YYYY-MM-DDTHH:mm for datetime-local inputs
@@ -330,11 +331,13 @@ export default function AdminReservations() {
                         <div className="flex items-center gap-1 font-medium">
                           <Calendar size={14} className="text-gray-400" />
                           {new Date(res.startTime).toLocaleDateString()}
+                          <span className="flex items-center"><ArrowRight size={12}/></span>
+                          {new Date(res.endTime).toLocaleDateString()}
                         </div>
                         <div className="flex items-center gap-1 text-gray-500 mt-1">
                           <Clock size={14} className="text-gray-400" />
                           {new Date(res.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          {" - "}
+                          <span className="flex items-center"><ArrowRight size={12}/></span>
                           {new Date(res.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </td>
@@ -360,7 +363,7 @@ export default function AdminReservations() {
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => handleOpenEditModal(res)}
-                            className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition"
+                            className="rounded p-1.5 text-gray-600! hover:bg-gray-100 hover:text-blue-600! transition"
                             title="Edit Reservation"
                           >
                             <Edit2 size={16} />
@@ -369,7 +372,7 @@ export default function AdminReservations() {
                           {res.status === "CONFIRMED" && (
                             <button
                               onClick={() => handleCancelReservation(res.id)}
-                              className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-red-600 transition"
+                              className="rounded p-1.5 text-gray-600! hover:bg-gray-100 hover:text-red-600! transition"
                               title="Cancel Reservation"
                             >
                               <Trash2 size={16} />
@@ -401,7 +404,7 @@ export default function AdminReservations() {
                 <h2 className="text-lg font-bold text-gray-900">New Reservation</h2>
                 <button
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  className="rounded-lg p-1 text-gray-600! hover:bg-gray-100 hover:text-gray-900!"
                 >
                   <X size={20} />
                 </button>
